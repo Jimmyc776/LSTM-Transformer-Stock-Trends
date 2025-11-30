@@ -1,1 +1,1 @@
-# deep_learning_project_lstm_transformer
+# LSTM-Transformer-Stock-Trends
