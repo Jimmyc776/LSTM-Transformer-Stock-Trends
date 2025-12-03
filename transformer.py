@@ -4,7 +4,7 @@ from typing import Tuple, Optional
 import math
 
 class PositionalEncoding(nn.Module):
-    def __init__(self,d_model:int,max_len:int=5000,dropout:float=0.1):
+    def __init__(self, d_model: int, max_len: int=5000, dropout: float=0.1):
       super().__init__()
       self.dropout=nn.Dropout(dropout)
       pe=torch.zeros(max_len,d_model)
@@ -15,36 +15,33 @@ class PositionalEncoding(nn.Module):
       pe=pe.unsqueeze(0)
       self.register_buffer('pe',pe)
 
-    def forward(self,x:torch.Tensor) -> torch.Tensor:
+    def forward(self, x : torch.Tensor) -> torch.Tensor:
       x=x+self.pe[:,: x.size(1)]
       return self.dropout(x)
 
     
 class StockTransformer(nn.Module):
-    def __init__(self,inp_dim:int,
-                 d_model:int=64, n_heads:int=4,
-                 num_layers:int=3, dim_feedforward:int=128,
-                 dropout:float=0.1, output_dim:int=1,
-                 max_len:int=500):
+    def __init__(self, inp_dim: int, d_model: int=64, n_heads: int=4, n_layers: int=3,
+                 dim_feedforward: int=128, dropout: float=0.1, output_dim: int=1, max_len: int=500):
         super().__init__()
         self.d_model=d_model
-        self.input_proj = nn.Linear(inp_dim,d_model)
-        self.pos_encoding=PositionalEncoding(d_model,max_len=max_len,dropout=dropout)
+        self.input_proj = nn.Linear(inp_dim, d_model)
+        self.pos_encoding=PositionalEncoding(d_model, max_len=max_len, dropout=dropout)
         encoder = nn.TransformerEncoderLayer(d_model=d_model,
                                              nhead=n_heads,
                                              dim_feedforward=dim_feedforward,
                                              dropout=dropout,
                                              batch_first=True)
-        self.encoder = nn.TransformerEncoder(encoder,num_layers=num_layers)
-        self.readout = nn.Linear(d_model,output_dim)
+        self.encoder = nn.TransformerEncoder(encoder, num_layers=n_layers)
+        self.readout = nn.Linear(d_model, output_dim)
 
-    def _generate_causal_mask(self,T:int,device:torch.device) -> torch.Tensor:
-       mask=torch.triu(torch.ones(T,T,device=device),diagonal=1)
-       mask=mask.masked_fill(mask==1,float('-inf')).masked_fill(mask==0,0.0)
+    def _generate_causal_mask(self, T: int, device: torch.device) -> torch.Tensor:
+       mask=torch.triu(torch.ones(T, T, device=device), diagonal=1)
+       mask=mask.masked_fill(mask==1, float('-inf')).masked_fill(mask==0,0.0)
        return mask
         
 
-    def forward(self, x: torch.Tensor, return_attn=False)-> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+    def forward(self, x: torch.Tensor, return_attn: bool=False) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         '''
         x                the inputs. shape: (B x T x dim)
 

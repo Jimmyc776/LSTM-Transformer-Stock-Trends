@@ -61,23 +61,36 @@ def save_model(model, save_name, save_dir='models'):
 
 
 if __name__ == "__main__":
-    # Example usage
+    ### Hyperparameters ###
+
+    # Dataloader
     SEQ_LEN = 100
-    BATCH_SIZE = 32
-    INPUT_SIZE = 1
-    HIDDEN_SIZE = 64
-    NUM_LAYERS = 2
-    DROP_OUT = 0.2
-    NUM_EPOCHS = 50
-    LEARNING_RATE = 0.001
-    DEVICE = 'cpu'
+    BATCH_SIZE = 32     
+    # LSTM
+    INPUT_SIZE = 1      # same; based on data
+    HIDDEN_SIZE = 64    # same; analogous to D_MODEL; increase to 128 if underfitting
+    NUM_LAYERS = 2      # unique, re-evaluate if underfitting
+    DROP_OUT = 0.2      # unique; re-evaluate if overfitting
+    # Transformer-specific
+    INP_DIM = 1         # same; based on data
+    D_MODEL = 64        # same; analogous to HIDDEN_SIZE; re-evaluate if underfitting
+    N_HEADS = 4         # unique; 64/4 = 16 - standard ratio
+    N_LAYERS = 3        # unique; re-evaluate if underfitting
+    DIM_FEEDFORWARD = 256   # unique; 4x D_MODEL is standard
+    DROPOUT = 0.1       # unique; re-evaluate if overfitting
+    OUTPUT_DIM = 1      # same; based on data - next-day closing price
+    MAX_LEN = 500       # unique; should be > SEQ_LEN
+    # Training
+    NUM_EPOCHS = 50     
+    LEARNING_RATE = 0.001   # 0.001 for LSTM, drop to 3e-4 if unstable
+    DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     stock_csv = 'selected_stocks_data.csv'  # Pre-downloaded stock prices
     metadata_csv = 'selected_stocks_quality.csv'  # Metadata with categories and qualities
 
     train_loader = create_stock_dataloader(stock_csv, metadata_csv, seq_len=SEQ_LEN, batch_size=BATCH_SIZE)['train_loader']
 
-    model = StockLSTM(input_size=INPUT_SIZE, hidden_size=HIDDEN_SIZE, num_layers=NUM_LAYERS, drop_out=DROP_OUT)
-    # model = StockTransformer()
+    model = StockLSTM(input_size=INPUT_SIZE, hidden_size=HIDDEN_SIZE, num_layers=NUM_LAYERS, dropout=DROP_OUT)
+    # model = StockTransformer(self, inp_dim=INP_DIM, d_model=D_MODEL, n_heads=N_HEADS, n_layers=N_LAYERS, dim_feedforward=DIM_FEEDFORWARD, dropout=DROPOUT, output_dim=1, max_len=500)
     trained_model = train_model(model, train_loader, num_epochs=NUM_EPOCHS, learning_rate=LEARNING_RATE, device=DEVICE)
     save_model(trained_model, save_name='StockLSTM_Model')
