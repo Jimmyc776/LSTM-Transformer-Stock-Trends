@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy import stats, signal
 
-def classify_trend_with_quality(close_prices, window=1250):
+def classify_trend_with_quality(close_prices: pd.Series, window: int=1250) -> tuple:
     """Classify stock trend into 5 buckets using 5 years of recent data"""
     if len(close_prices) < 5000: # need 20 years of data in training
         return None

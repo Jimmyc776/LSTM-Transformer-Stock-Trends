@@ -4,7 +4,8 @@ import torch
 from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import TensorDataset, DataLoader
 
-def create_stock_dataloader(stock_csv, metadata_csv, seq_len=100, batch_size=32, seed=42):
+def create_stock_dataloader(stock_csv: str, metadata_csv: str, seq_len: int=100, batch_size: int=32, seed: int=42,
+                            stocks_per_bucket: int=13, train_per_bucket: int=10) -> dict:
     """
     Elite 15 -> 10 train + 3 eval split -> LSTM/Transformer ready tensors
     """
@@ -21,21 +22,21 @@ def create_stock_dataloader(stock_csv, metadata_csv, seq_len=100, batch_size=32,
     eval_tickers = []
     eval_details = []
 
-    print("\nSplitting top 13 stocks per category...")
+    print(f"\nSplitting top {stocks_per_bucket} stocks per category...")
     for category in metadata['category'].unique():
-        cat_data = metadata[metadata['category'] == category].sort_values('quality', ascending=False).head(13)
+        cat_data = metadata[metadata['category'] == category].sort_values('quality', ascending=False).head(stocks_per_bucket)
 
-        train_idx = np.random.choice(13, 10, replace=False)
-        eval_idx = np.setdiff1d(np.arange(13), train_idx)
+        train_idx = np.random.choice(stocks_per_bucket, train_per_bucket, replace=False)
+        eval_idx = np.setdiff1d(np.arange(stocks_per_bucket), train_idx)
 
         train_tickers.extend(cat_data.iloc[train_idx]['ticker'].tolist())
         eval_tickers.extend(cat_data.iloc[eval_idx]['ticker'].tolist())
-        eval_details.extend([f"{category}: {cat_data.iloc[i]['ticker']} (q={cat_data.iloc[i]['quality_scores']:.4f})" for i in eval_idx])
+        eval_details.extend([f"{category}: {cat_data.iloc[i]['ticker']} (q={cat_data.iloc[i]['quality']:.4f})" for i in eval_idx])
 
     print(f"✅ Train: {len(train_tickers)} tickers | Eval: {len(eval_tickers)} tickers")
     print("Eval stocks:", eval_details)
 
-    # 3. Tran tensors [N, seq_len, 1]
+    # 3. Train tensors [N, seq_len, 1]
     scalers = {}
     train_sequences = []
     train_targets = []
@@ -74,6 +75,8 @@ def create_stock_dataloader(stock_csv, metadata_csv, seq_len=100, batch_size=32,
     eval_X = torch.FloatTensor(np.array(eval_sequences))  # [N, seq_len, 1]
     eval_y = torch.FloatTensor(np.array(eval_targets))    # [N, 1]
     eval_dataset = TensorDataset(eval_X, eval_y)
+
+    print(f"\n✅ Data loaded: {len(train_tickers)} train tickers, {len(eval_tickers)} eval tickers")
 
     return {
         'train_loader': train_loader,
