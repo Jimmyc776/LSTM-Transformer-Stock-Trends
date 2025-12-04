@@ -39,23 +39,68 @@ def save_model(model: torch.nn.Module, save_name: str, save_dir: str='models') -
     Save trained omdel + optimizer + metadata
     """
     os.makedirs(save_dir, exist_ok=True)
-
-    save_path = os.path.join(save_dir, f"{save_name}.pth")
+    save_path = os.path.join(save_dir, f"{save_name}")
 
     # Save everything needed for evaluation
-    torch.save({
-        'model_state_dict': model.state_dict(),
-        'model_type': model.__class__.__name__,
-        'input_size': getattr(model, 'input_size', 1),
-        'hidden_size': getattr(model, 'hidden_size', 64),
-        'num_layers': getattr(model, 'num_layers', 2),
-        'dropout': getattr(model, 'dropout', 0.2),
-        'seq_len': 100,  # From dataloader
-        'architecture': 'StockLSTM' if isinstance(model, StockLSTM) else 'StockTransformer'
-        }, save_path)
+    if 'LSTM' in model.__class__.__name__:
+        torch.save({
+            'model_state_dict': model.state_dict(),
+            'model_type': model.__class__.__name__,
+            'input_size': getattr(model, 'input_size', 1),
+            'hidden_size': getattr(model, 'hidden_size', 64),
+            'num_layers': getattr(model, 'num_layers', 2),
+            'dropout': getattr(model, 'dropout', 0.2),
+            'architecture': 'StockLSTM'
+            }, save_path)
+    elif 'Transformer' in model.__class__.__name__:
+        torch.save({
+            'model_state_dict': model.state_dict(),
+            'model_type': model.__class__.__name__,
+            'inp_dim': getattr(model, 'inp_dim', 1),
+            'd_model': getattr(model, 'd_model', 64),
+            'n_heads': getattr(model, 'n_heads', 4),
+            'n_layers': getattr(model, 'n_layers', 3),
+            'dim_feedforward': getattr(model, 'dim_feedforward', 256),
+            'dropout': getattr(model, 'dropout', 0.1),
+            'output_dim': getattr(model, 'output_dim', 1),
+            'max_len': getattr(model, 'max_len', 500),
+            'architecture': 'StockTransformer'
+            }, save_path)
 
     print(f"✅ Model saved: {save_path}")
     return save_path
+
+def load_model(load_path: str) -> torch.nn.Module:
+    """
+    Load trained model from disk
+    """
+    if not os.path.exists(load_path):
+        raise FileNotFoundError(f"❌ Model file not found: {load_path}")
+        
+    checkpoint = torch.load(load_path, weights_only=True)
+    model_type = checkpoint['model_type']
+
+    if model_type == 'StockLSTM':
+        model = StockLSTM(input_size=checkpoint['input_size'],
+                          hidden_size=checkpoint['hidden_size'],
+                          num_layers=checkpoint['num_layers'],
+                          dropout=checkpoint['dropout'])
+    elif model_type == 'StockTransformer':
+        model = StockTransformer(inp_dim=checkpoint['inp_dim'],
+                                 d_model=checkpoint['d_model'],
+                                 n_heads=checkpoint['n_heads'],
+                                 n_layers=checkpoint['n_layers'],
+                                 dim_feedforward=checkpoint['dim_feedforward'],
+                                 dropout=checkpoint['dropout'],
+                                 output_dim=checkpoint['output_dim'],
+                                 max_len=checkpoint['max_len'])
+    else:
+        raise ValueError(f"Unknown model type {model_type} in checkpoint.")
+
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.eval()
+    print(f"✅ Model loaded: {load_path}")
+    return model
 
 
 if __name__ == "__main__":
@@ -71,7 +116,7 @@ if __name__ == "__main__":
     BATCH_SIZE = 32         # default 32; increase if GPU mem allows
     STOCKS_PER_BUCKET = 5   # default 13; number of stocks per category bucket
     TRAIN_PER_BUCKET = 3    # default 10; number of training stocks per category bucket
-    # LSTM
+    # LSTM-specific
     INPUT_SIZE = 1          # default 1; based on data
     HIDDEN_SIZE = 64        # default 64; analogous to D_MODEL; increase to 128 if underfitting
     NUM_LAYERS = 2          # default 2, re-evaluate if underfitting

@@ -75,12 +75,13 @@ def create_stock_dataloader(stock_csv: str, metadata_csv: str, seq_len: int=100,
     eval_X = torch.FloatTensor(np.array(eval_sequences))  # [N, seq_len, 1]
     eval_y = torch.FloatTensor(np.array(eval_targets))    # [N, 1]
     eval_dataset = TensorDataset(eval_X, eval_y)
+    eval_loader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=False)
 
     print(f"\n✅ Data loaded: {len(train_tickers)} train tickers, {len(eval_tickers)} eval tickers")
 
     return {
         'train_loader': train_loader,
-        'eval_dataset': eval_dataset,
+        'eval_loader': eval_loader,
         'train_tickers': train_tickers,
         'eval_tickers': eval_tickers,
         'eval_details': eval_details,
