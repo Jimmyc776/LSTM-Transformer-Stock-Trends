@@ -21,7 +21,7 @@ class PositionalEncoding(nn.Module):
 
     
 class StockTransformer(nn.Module):
-    def __init__(self, inp_dim: int, d_model: int=64, n_heads: int=4, n_layers: int=3,
+    def __init__(self, inp_dim: int=1, d_model: int=64, n_heads: int=4, n_layers: int=3,
                  dim_feedforward: int=128, dropout: float=0.1, output_dim: int=1, max_len: int=500):
         super().__init__()
         self.d_model=d_model
@@ -41,7 +41,7 @@ class StockTransformer(nn.Module):
        return mask
         
 
-    def forward(self, x: torch.Tensor, return_attn: bool=False) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''
         x                the inputs. shape: (B x T x dim)
 
@@ -65,6 +65,4 @@ class StockTransformer(nn.Module):
         last_hidden = encoded[:,-1,:]
         y_pred=self.readout(last_hidden)
 
-        if return_attn:
-           return y_pred,encoded
-        return y_pred,None
+        return y_pred

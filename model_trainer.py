@@ -1,11 +1,11 @@
 import torch
 import os
+from tqdm import tqdm
 from lstm import StockLSTM
 from transformer import StockTransformer
 from stock_dataloader import create_stock_dataloader
-from datetime import datetime
 
-def train_model(model, train_loader, num_epochs=50, learning_rate=0.001, device='cpu'):
+def train_model(model: torch.nn.Module, train_loader: torch.utils.data.DataLoader, num_epochs: int=50, learning_rate: float=0.001, device: str='cpu') -> torch.nn.Module:
     """
     Train LSTM/Transformer model on stock data
     """
@@ -16,7 +16,7 @@ def train_model(model, train_loader, num_epochs=50, learning_rate=0.001, device=
 
     model.train()
 
-    for epoch in range(num_epochs):
+    for epoch in tqdm(range(num_epochs), desc="Training Epochs"):
         epoch_loss = 0.0
         for batch_x, batch_y in train_loader:
             batch_x, batch_y = batch_x.to(device), batch_y.to(device)
@@ -34,27 +34,25 @@ def train_model(model, train_loader, num_epochs=50, learning_rate=0.001, device=
 
     return model
 
-def save_model(model, save_name, save_dir='models'):
+def save_model(model: torch.nn.Module, save_name: str, save_dir: str='models') -> str:
     """
     Save trained omdel + optimizer + metadata
     """
     os.makedirs(save_dir, exist_ok=True)
 
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    save_path = os.path.join(save_dir, f"{save_name}_{timestamp}.pth")
+    save_path = os.path.join(save_dir, f"{save_name}.pth")
 
     # Save everything needed for evaluation
     torch.save({
         'model_state_dict': model.state_dict(),
         'model_type': model.__class__.__name__,
-        'timestamp': timestamp,
         'input_size': getattr(model, 'input_size', 1),
         'hidden_size': getattr(model, 'hidden_size', 64),
         'num_layers': getattr(model, 'num_layers', 2),
         'dropout': getattr(model, 'dropout', 0.2),
         'seq_len': 100,  # From dataloader
         'architecture': 'StockLSTM' if isinstance(model, StockLSTM) else 'StockTransformer'
-    })
+        }, save_path)
 
     print(f"✅ Model saved: {save_path}")
     return save_path
@@ -63,34 +61,49 @@ def save_model(model, save_name, save_dir='models'):
 if __name__ == "__main__":
     ### Hyperparameters ###
 
+    # Pick model: LSTM or Transformer
+    model_choice = 'Transformer'   # Select 'LSTM' or 'Transformer'
+    model_save_name = f'Stock{model_choice}_ModelMini'
+    load_model = False
+
     # Dataloader
-    SEQ_LEN = 100
-    BATCH_SIZE = 32     
+    SEQ_LEN = 100           # default 100; window for set of time-series data points
+    BATCH_SIZE = 32         # default 32; increase if GPU mem allows
+    STOCKS_PER_BUCKET = 5   # default 13; number of stocks per category bucket
+    TRAIN_PER_BUCKET = 3    # default 10; number of training stocks per category bucket
     # LSTM
-    INPUT_SIZE = 1      # same; based on data
-    HIDDEN_SIZE = 64    # same; analogous to D_MODEL; increase to 128 if underfitting
-    NUM_LAYERS = 2      # unique, re-evaluate if underfitting
-    DROP_OUT = 0.2      # unique; re-evaluate if overfitting
+    INPUT_SIZE = 1          # default 1; based on data
+    HIDDEN_SIZE = 64        # default 64; analogous to D_MODEL; increase to 128 if underfitting
+    NUM_LAYERS = 2          # default 2, re-evaluate if underfitting
+    DROP_OUT = 0.2          # default 0.2; re-evaluate if overfitting
     # Transformer-specific
-    INP_DIM = 1         # same; based on data
-    D_MODEL = 64        # same; analogous to HIDDEN_SIZE; re-evaluate if underfitting
-    N_HEADS = 4         # unique; 64/4 = 16 - standard ratio
-    N_LAYERS = 3        # unique; re-evaluate if underfitting
-    DIM_FEEDFORWARD = 256   # unique; 4x D_MODEL is standard
-    DROPOUT = 0.1       # unique; re-evaluate if overfitting
-    OUTPUT_DIM = 1      # same; based on data - next-day closing price
-    MAX_LEN = 500       # unique; should be > SEQ_LEN
+    INP_DIM = 1             # default 1; based on data
+    D_MODEL = 64            # default 64; analogous to HIDDEN_SIZE; re-evaluate if underfitting
+    N_HEADS = 4             # default 4; 64/4 = 16 - standard ratio
+    N_LAYERS = 3            # default 3; re-evaluate if underfitting
+    DIM_FEEDFORWARD = 256   # default 256; 4x D_MODEL is standard
+    DROPOUT = 0.1           # default 0.1; re-evaluate if overfitting
+    OUTPUT_DIM = 1          # default 1; based on data - next-day closing price
+    MAX_LEN = 500           # default 500; should be > SEQ_LEN
     # Training
-    NUM_EPOCHS = 50     
-    LEARNING_RATE = 0.001   # 0.001 for LSTM, drop to 3e-4 if unstable
+    NUM_EPOCHS = 50         # default 50; increase if underfitting
+    LEARNING_RATE = 0.001   # default 0.001; drop to 3e-4 if unstable
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     stock_csv = 'selected_stocks_data.csv'  # Pre-downloaded stock prices
     metadata_csv = 'selected_stocks_quality.csv'  # Metadata with categories and qualities
 
-    train_loader = create_stock_dataloader(stock_csv, metadata_csv, seq_len=SEQ_LEN, batch_size=BATCH_SIZE)['train_loader']
+    train_loader = create_stock_dataloader(stock_csv, metadata_csv, seq_len=SEQ_LEN, batch_size=BATCH_SIZE,
+                                           stocks_per_bucket=STOCKS_PER_BUCKET, train_per_bucket=TRAIN_PER_BUCKET)['train_loader']
 
-    model = StockLSTM(input_size=INPUT_SIZE, hidden_size=HIDDEN_SIZE, num_layers=NUM_LAYERS, dropout=DROP_OUT)
-    # model = StockTransformer(self, inp_dim=INP_DIM, d_model=D_MODEL, n_heads=N_HEADS, n_layers=N_LAYERS, dim_feedforward=DIM_FEEDFORWARD, dropout=DROPOUT, output_dim=1, max_len=500)
+    if model_choice == 'LSTM':
+        model = StockLSTM(input_size=INPUT_SIZE, hidden_size=HIDDEN_SIZE, num_layers=NUM_LAYERS, dropout=DROP_OUT).to(DEVICE)
+    elif model_choice == 'Transformer':
+        model = StockTransformer(inp_dim=INP_DIM, d_model=D_MODEL, n_heads=N_HEADS, n_layers=N_LAYERS,
+                                 dim_feedforward=DIM_FEEDFORWARD, dropout=DROPOUT, output_dim=OUTPUT_DIM, max_len=MAX_LEN).to(DEVICE)
+    else:
+        raise ValueError(f"Invalid model choice {model_choice}. Select 'LSTM' or 'Transformer'.")
+    
+    print(f"Training {model_choice} model on device: {DEVICE}")
     trained_model = train_model(model, train_loader, num_epochs=NUM_EPOCHS, learning_rate=LEARNING_RATE, device=DEVICE)
-    save_model(trained_model, save_name='StockLSTM_Model')
+    save_model(trained_model, save_name=model_save_name)
