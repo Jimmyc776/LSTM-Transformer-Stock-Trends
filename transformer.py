@@ -34,6 +34,7 @@ class StockTransformer(nn.Module):
                                              batch_first=True)
         self.encoder = nn.TransformerEncoder(encoder, num_layers=n_layers)
         self.readout = nn.Linear(d_model, output_dim)
+        self.layer_norm = nn.LayerNorm(d_model)
 
     def _generate_causal_mask(self, T: int, device: torch.device) -> torch.Tensor:
        mask=torch.triu(torch.ones(T, T, device=device), diagonal=1)
@@ -60,8 +61,9 @@ class StockTransformer(nn.Module):
         x=self.input_proj(x)*math.sqrt(self.d_model)
         x=self.pos_encoding(x)
 
-        causal_mask=self._generate_causal_mask(T,device)
-        encoded=self.encoder(x,mask=causal_mask)
+        causal_mask=self._generate_causal_mask(T, device)
+        encoded=self.encoder(x, mask=causal_mask)
+        encoded = self.layer_norm(encoded)    # Add LayerNorm for stability
         last_hidden = encoded[:,-1,:]
         y_pred=self.readout(last_hidden)
 
