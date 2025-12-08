@@ -63,7 +63,7 @@ def save_model(model: torch.nn.Module, save_name: str, save_dir: str='models') -
             'dim_feedforward': getattr(model, 'dim_feedforward', 256),
             'dropout': getattr(model, 'dropout', 0.1),
             'output_dim': getattr(model, 'output_dim', 1),
-            'max_len': getattr(model, 'max_len', 500),
+            'max_len': getattr(model, 'max_len', 1500),
             'architecture': 'StockTransformer'
             }, save_path)
 
@@ -79,6 +79,10 @@ def load_model(load_path: str) -> torch.nn.Module:
         
     checkpoint = torch.load(load_path, weights_only=True)
     model_type = checkpoint['model_type']
+
+    checkpoint = torch.load('models/StockTransformer_ModelFull', weights_only=True)
+    print("Checkpoint max_len:", checkpoint['max_len'])  # Probably 1500!
+    print("Checkpoint seq_len?", 'seq_len' in checkpoint)  # Probably not saved
 
     if model_type == 'StockLSTM':
         model = StockLSTM(input_size=checkpoint['input_size'],
@@ -112,10 +116,10 @@ if __name__ == "__main__":
     load_model = False
 
     # Dataloader
-    SEQ_LEN = 100           # default 100; window for set of time-series data points
-    BATCH_SIZE = 32         # default 32; increase if GPU mem allows
-    STOCKS_PER_BUCKET = 5   # default 13; number of stocks per category bucket
-    TRAIN_PER_BUCKET = 3    # default 10; number of training stocks per category bucket
+    SEQ_LEN = 1250          # default 1250; window for set of time-series data points
+    BATCH_SIZE = 128        # default 128; uses 25-30% of 12GB NVIDIA GeForce RTX 4070 GPU
+    STOCKS_PER_BUCKET = 13  # default 13; number of stocks per category bucket
+    TRAIN_PER_BUCKET = 10   # default 10; number of training stocks per category bucket
     # LSTM-specific
     INPUT_SIZE = 1          # default 1; based on data
     HIDDEN_SIZE = 64        # default 64; analogous to D_MODEL; increase to 128 if underfitting
@@ -129,10 +133,10 @@ if __name__ == "__main__":
     DIM_FEEDFORWARD = 256   # default 256; 4x D_MODEL is standard
     DROPOUT = 0.1           # default 0.1; re-evaluate if overfitting
     OUTPUT_DIM = 1          # default 1; based on data - next-day closing price
-    MAX_LEN = 500           # default 500; should be > SEQ_LEN
+    MAX_LEN = 1500          # default 1500; should be > SEQ_LEN
     # Training
     NUM_EPOCHS = 50         # default 50; increase if underfitting
-    LEARNING_RATE = 0.001   # default 0.001; drop to 3e-4 if unstable
+    LEARNING_RATE = 0.0001  # default 0.0001; 1e-3 exploded
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     stock_csv = 'selected_stocks_data.csv'  # Pre-downloaded stock prices
