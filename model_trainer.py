@@ -80,9 +80,8 @@ def load_model(load_path: str) -> torch.nn.Module:
     checkpoint = torch.load(load_path, weights_only=True)
     model_type = checkpoint['model_type']
 
-    checkpoint = torch.load('models/StockTransformer_ModelFull', weights_only=True)
-    print("Checkpoint max_len:", checkpoint['max_len'])  # Probably 1500!
-    print("Checkpoint seq_len?", 'seq_len' in checkpoint)  # Probably not saved
+    # print("Checkpoint max_len:", checkpoint['max_len'])  # Probably 1500!
+    # print("Checkpoint seq_len?", 'seq_len' in checkpoint)  # Probably not saved
 
     if model_type == 'StockLSTM':
         model = StockLSTM(input_size=checkpoint['input_size'],
