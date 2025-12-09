@@ -61,7 +61,7 @@ def save_metrics_csv(results: dict, csv_path: str, metadata_csv: str | None = No
 
     df = pd.DataFrame(rows)
     df = df.set_index("ticker").T
-    df.insert(0, "row_label", df.index)
+    df.insert(0, "ticker", df.index)
     df = df.reset_index(drop=True)
     df.to_csv(csv_path, index=False)
     print(f"Saved wide metrics to {csv_path}")

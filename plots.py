@@ -80,8 +80,8 @@ def plot_direct_full_series(lstm_model, transformer_model, ticker: str, series: 
 
     fig, ax = plt.subplots(figsize=(14, 6))
     ax.plot(ts, true_vals.numpy(), label="True", color="black")
-    ax.plot(ts, lstm_preds.numpy(), label=f"LSTM (MSE={lstm_mse:.4f})", color="C1", linestyle="--")
-    ax.plot(ts, transformer_preds.numpy(), label=f"Transformer (MSE={transformer_mse:.4f})", color="C2", linestyle="--")
+    ax.plot(ts, lstm_preds.numpy(), label=f"LSTM (MSE={lstm_mse:.4f})", color="C1")
+    ax.plot(ts, transformer_preds.numpy(), label=f"Transformer (MSE={transformer_mse:.4f})", color="C2")
 
     ax.set_title(f"{ticker} -- Direct 1-step predictions (full series)")
     ax.set_xlabel("Time index")
