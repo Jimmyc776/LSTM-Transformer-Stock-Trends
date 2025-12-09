@@ -25,7 +25,7 @@ def plot_autoregressive_chain(lstm_model, transformer_model, ticker: str, series
             transformer_preds.append(transformer_pred)
             lstm_cur = torch.cat([lstm_cur, lstm_pred.view(1)], dim=0)
             transformer_cur = torch.cat([transformer_cur, transformer_pred.view(1)], dim=0)
-    
+
     lstm_preds = torch.stack(lstm_preds)
     transformer_preds = torch.stack(transformer_preds)
 
@@ -52,5 +52,82 @@ def plot_autoregressive_chain(lstm_model, transformer_model, ticker: str, series
     ax.legend()
     ax.grid(alpha=0.3)
 
+    plt.tight_layout()
+    return fig
+
+def plot_direct_full_series(lstm_model, transformer_model, ticker: str, series: torch.Tensor, seq_len: int, device: torch.device,) -> plt.Figure:
+    series = series.squeeze()
+    T = len(series)
+
+    ts = np.arange(seq_len, T)
+    true_vals = series[seq_len:T]
+
+    lstm_preds = []
+    transformer_preds = []
+
+    with torch.no_grad():
+        for t in range(seq_len, T):
+            x = series[t-seq_len:t].unsqueeze(-1).unsqueeze(0).to(device)
+            lstm_preds.append(lstm_model(x).squeeze().cpu())
+            transformer_preds.append(transformer_model(x).squeeze().cpu())
+
+    lstm_preds = torch.stack(lstm_preds)
+    transformer_preds = torch.stack(transformer_preds)
+
+    # Optional: summary errors
+    lstm_mse = mse(lstm_preds, true_vals)
+    transformer_mse = mse(transformer_preds, true_vals)
+
+    fig, ax = plt.subplots(figsize=(14, 6))
+    ax.plot(ts, true_vals.numpy(), label="True", color="black")
+    ax.plot(ts, lstm_preds.numpy(), label=f"LSTM (MSE={lstm_mse:.4f})", color="C1", linestyle="--")
+    ax.plot(ts, transformer_preds.numpy(), label=f"Transformer (MSE={transformer_mse:.4f})", color="C2", linestyle="--")
+
+    ax.set_title(f"{ticker} -- Direct 1-step predictions (full series)")
+    ax.set_xlabel("Time index")
+    ax.set_ylabel("Scaled price")
+    ax.legend()
+    ax.grid(alpha=0.3)
+    plt.tight_layout()
+    return fig
+
+
+def plot_category_window_errors(lstm_model, transformer_model, ticker: str, series: torch.Tensor, seq_len: int, device: torch.device) -> plt.Figure:
+    series = series.squeeze()
+    T = len(series)
+
+    # Tail: 1250 context + 1250 category window
+    tail = series[-2*seq_len:]   # [2*seq_len]
+    tail_T = len(tail)
+
+    true_vals = tail[seq_len:tail_T]  # category window targets
+
+    lstm_preds = []
+    trans_preds = []
+
+    with torch.no_grad():
+        for t in range(seq_len, tail_T):
+            x = tail[t-seq_len:t].unsqueeze(-1).unsqueeze(0).to(device)
+            lstm_preds.append(lstm_model(x).squeeze().cpu())
+            trans_preds.append(transformer_model(x).squeeze().cpu())
+
+    lstm_preds = torch.stack(lstm_preds)
+    trans_preds = torch.stack(trans_preds)
+
+    # Absolute error over time
+    lstm_abs_err = (lstm_preds - true_vals).abs()
+    trans_abs_err = (trans_preds - true_vals).abs()
+
+    fig, ax = plt.subplots(figsize=(12, 5))
+    local_ts = np.arange(len(true_vals))
+
+    ax.plot(local_ts, lstm_abs_err.numpy(), label="LSTM |error|", color="C1")
+    ax.plot(local_ts, trans_abs_err.numpy(), label="Transformer |error|", color="C2")
+
+    ax.set_title(f"{ticker} -- Absolute error over category window (last 5y)")
+    ax.set_xlabel("Time index within category window")
+    ax.set_ylabel("Absolute error (scaled)")
+    ax.legend()
+    ax.grid(alpha=0.3)
     plt.tight_layout()
     return fig
