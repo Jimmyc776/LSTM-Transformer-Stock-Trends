@@ -73,6 +73,27 @@
     font-size: 0.9rem;
     color: #555;
   }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 6px 10px;
+    text-align: right;
+  }
+  th:first-child, td:first-child {
+    text-align: left;
+  }
+  th {
+    background: #f4f4f4;
+  }
+  tr:nth-child(even) {
+    background: #fafafa;
+  }
+
 </style>
 </head>
 
@@ -109,7 +130,8 @@
     </li>
 
     <li><a href="#references">References</a></li>
-  </ul>
+    <li><a href="#appendix">Appendix</a></li>
+</ul>
 </div>
 
 <!-- SECTIONS -->
@@ -192,6 +214,196 @@
     [3] H. Zhou, S. Zhang, J. Peng, S. Zhang, J. Li, H. Xiong, and W. Zhang, “Informer: Beyond efficient Transformer for long sequence time-series forecasting,” arXiv preprint arXiv:2012.07436, 2021.<br>
     
     [4] Yahoo Finance, “Yahoo Finance: Stock market quotes, news, and data,” Yahoo, Accessed: Feb. 2025. [Online]. Available: https://finance.yahoo.com/<br></p>
+
+<h2 id="appendix">Appendix</h2>
+<p></p>
+<table>
+    <thead>
+      <tr>
+        <th>ticker</th>
+        <th>COKE</th>
+        <th>CLMB</th>
+        <th>CRVL</th>
+        <th>JOUT</th>
+        <th>IEP</th>
+        <th>KVHI</th>
+        <th>EBMT</th>
+        <th>MSEX</th>
+        <th>ERIC</th>
+        <th>EVRG</th>
+        <th>DGICA</th>
+        <th>JBSS</th>
+        <th>KMB</th>
+        <th>FUND</th>
+        <th>BBH</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>category</td>
+        <td>increasing</td>
+        <td>increasing</td>
+        <td>increasing</td>
+        <td>decreasing</td>
+        <td>decreasing</td>
+        <td>decreasing</td>
+        <td>one_spike</td>
+        <td>one_spike</td>
+        <td>one_spike</td>
+        <td>two_spikes</td>
+        <td>two_spikes</td>
+        <td>two_spikes</td>
+        <td>stagnant</td>
+        <td>stagnant</td>
+        <td>stagnant</td>
+      </tr>
+      <tr>
+        <td>lstm_full_mse</td>
+        <td>1893.89976</td>
+        <td>1194.96562</td>
+        <td>1687.3442</td>
+        <td>2202.59149</td>
+        <td>199.4177</td>
+        <td>50.9043666</td>
+        <td>94.1465704</td>
+        <td>2096.89182</td>
+        <td>17.2605254</td>
+        <td>1422.84083</td>
+        <td>58.047941</td>
+        <td>2712.81399</td>
+        <td>8298.25837</td>
+        <td>4.73329278</td>
+        <td>15013.5213</td>
+      </tr>
+      <tr>
+        <td>lstm_full_mae</td>
+        <td>27.9429282</td>
+        <td>21.0686749</td>
+        <td>28.4733398</td>
+        <td>38.6137883</td>
+        <td>12.6180505</td>
+        <td>6.66892036</td>
+        <td>8.7909307</td>
+        <td>38.0321503</td>
+        <td>3.8959784</td>
+        <td>34.4698417</td>
+        <td>7.26368847</td>
+        <td>43.1161112</td>
+        <td>86.5558809</td>
+        <td>1.92400657</td>
+        <td>113.550415</td>
+      </tr>
+      <tr>
+        <td>lstm_cat_mse</td>
+        <td>5423.98148</td>
+        <td>3480.73795</td>
+        <td>4797.89058</td>
+        <td>4000.43919</td>
+        <td>269.910433</td>
+        <td>29.7578318</td>
+        <td>158.007401</td>
+        <td>4739.0827</td>
+        <td>19.7655063</td>
+        <td>2571.01036</td>
+        <td>96.9969728</td>
+        <td>5777.37455</td>
+        <td>13433.9378</td>
+        <td>10.7107388</td>
+        <td>26174.3463</td>
+      </tr>
+      <tr>
+        <td>lstm_cat_mae</td>
+        <td>64.7832424</td>
+        <td>48.5196507</td>
+        <td>64.4694169</td>
+        <td>56.8436283</td>
+        <td>14.6922021</td>
+        <td>4.81407147</td>
+        <td>12.234968</td>
+        <td>67.1644482</td>
+        <td>4.04046888</td>
+        <td>50.2778341</td>
+        <td>9.65885824</td>
+        <td>74.8667959</td>
+        <td>115.579506</td>
+        <td>3.22474519</td>
+        <td>161.012607</td>
+      </tr>
+      <tr>
+        <td>trans_full_mse</td>
+        <td>2059.3963</td>
+        <td>1321.21271</td>
+        <td>1856.69369</td>
+        <td>2430.7691</td>
+        <td>276.460131</td>
+        <td>92.9224032</td>
+        <td>148.912768</td>
+        <td>2321.93392</td>
+        <td>41.9694801</td>
+        <td>1627.31057</td>
+        <td>104.098875</td>
+        <td>2966.94516</td>
+        <td>8805.24296</td>
+        <td>14.4323181</td>
+        <td>15676.702</td>
+      </tr>
+      <tr>
+        <td>trans_full_mae</td>
+        <td>30.5673303</td>
+        <td>23.7799171</td>
+        <td>31.2205279</td>
+        <td>41.435124</td>
+        <td>15.3199123</td>
+        <td>9.23534561</td>
+        <td>11.4485846</td>
+        <td>40.8529804</td>
+        <td>6.24863209</td>
+        <td>37.3034145</td>
+        <td>9.92364182</td>
+        <td>45.8506874</td>
+        <td>89.4333198</td>
+        <td>3.42105744</td>
+        <td>116.428675</td>
+      </tr>
+      <tr>
+        <td>trans_cat_mse</td>
+        <td>5804.44738</td>
+        <td>3766.7466</td>
+        <td>5176.60883</td>
+        <td>4334.03175</td>
+        <td>359.158836</td>
+        <td>59.7407874</td>
+        <td>233.162808</td>
+        <td>5133.16424</td>
+        <td>45.0724176</td>
+        <td>2867.33345</td>
+        <td>157.239249</td>
+        <td>6216.40458</td>
+        <td>14109.2938</td>
+        <td>31.2704814</td>
+        <td>27112.2742</td>
+      </tr>
+      <tr>
+        <td>trans_cat_mae</td>
+        <td>67.6459542</td>
+        <td>51.3654377</td>
+        <td>67.3375369</td>
+        <td>59.6945274</td>
+        <td>17.4254165</td>
+        <td>7.16135689</td>
+        <td>14.9886181</td>
+        <td>70.0348711</td>
+        <td>6.35143669</td>
+        <td>53.1423455</td>
+        <td>12.3873991</td>
+        <td>77.7427618</td>
+        <td>118.465002</td>
+        <td>5.53974094</td>
+        <td>163.899207</td>
+      </tr>
+    </tbody>
+  </table>
+  
 
 </body>
 </html>
