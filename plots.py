@@ -74,17 +74,47 @@ def plot_direct_full_series(lstm_model, transformer_model, ticker: str, series: 
     lstm_preds = torch.stack(lstm_preds)
     transformer_preds = torch.stack(transformer_preds)
 
-    # Optional: summary errors
-    lstm_mse = mse(lstm_preds, true_vals)
-    transformer_mse = mse(transformer_preds, true_vals)
-
     fig, ax = plt.subplots(figsize=(14, 6))
     ax.plot(ts, true_vals.numpy(), label="True", color="black")
-    ax.plot(ts, lstm_preds.numpy(), label=f"LSTM (MSE={lstm_mse:.4f})", color="C1")
-    ax.plot(ts, transformer_preds.numpy(), label=f"Transformer (MSE={transformer_mse:.4f})", color="C2")
+    ax.plot(ts, lstm_preds.numpy(), label="LSTM", color="C1")
+    ax.plot(ts, transformer_preds.numpy(), label="Transformer", color="C2")
 
-    ax.set_title(f"{ticker} -- Direct 1-step predictions (full series)")
+    ax.set_title(f"{ticker} -- Direct one-step predictions")
     ax.set_xlabel("Time index")
+    ax.set_ylabel("Scaled price")
+    ax.legend()
+    ax.grid(alpha=0.3)
+    plt.tight_layout()
+    return fig
+
+def plot_direct_category_window(lstm_model, transformer_model, ticker: str, series: torch.Tensor, seq_len: int, device: torch.device) -> plt.Figure:
+    # Restrict to last 2*seq_len (context + category window)
+    tail = series.squeeze()[-2*seq_len:]
+    tail_T = len(tail)
+    
+    # Predictions only for the category window (last seq_len of tail)
+    true_vals = tail[seq_len:tail_T]
+    ts = np.arange(1, len(true_vals) + 1)
+
+    lstm_preds = []
+    transformer_preds = []
+
+    with torch.no_grad():
+        for t in range(seq_len, tail_T):
+            x = tail[t-seq_len:t].unsqueeze(-1).unsqueeze(0).to(device)
+            lstm_preds.append(lstm_model(x).squeeze().cpu())
+            transformer_preds.append(transformer_model(x).squeeze().cpu())
+
+    lstm_preds = torch.stack(lstm_preds)
+    transformer_preds = torch.stack(transformer_preds)
+
+    fig, ax = plt.subplots(figsize=(14, 6))
+    ax.plot(ts, true_vals.numpy(), label="True (category window)", color="black")
+    ax.plot(ts, lstm_preds.numpy(), label="LSTM", color="C1")
+    ax.plot(ts, transformer_preds.numpy(), label="Transformer", color="C2")
+
+    ax.set_title(f"{ticker} -- Direct one-step predictions (classification window)")
+    ax.set_xlabel("Time index within category window")
     ax.set_ylabel("Scaled price")
     ax.legend()
     ax.grid(alpha=0.3)
