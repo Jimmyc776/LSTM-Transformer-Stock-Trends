@@ -159,9 +159,9 @@
 <p>As with any industry deep dive, the first step is arguably the most important: the accumulation of high-quality data. To this end, we had two objectives to fulfill in gathering data. One, we needed a lot of data points to attempt to train sufficiently large models. And two, we needed data that had specific trends to test the models' predictions of those trends. We started with the second goal. To classify the trends, we would focus on a yet-to-be-determined time period (the classification window) of stock data and mathematically calculate if the overall trend in that period was increasing, decreasing, stagnant, one spike, or two spikes. If the data in a classification window was too noisy, it would fail to be classified into any of these categories. Additionally, we developed a numerical “quality” metric that would rank the significance of the trend in that classification window. In other words, it's a similarity score between the perfect trend for that window and the stock's real-world trend in that window. Using this score, we could pick stocks that had the best quality of trends, and thus feed the model the best real-world examples of each of the categories. The “quality” metric is arbitrary, but it is not a significant feature of the project. Each trend is subject to the same metric, which weights its slope and volatility in the case of the increasing, decreasing, or stagnant categories, or just its volatility in the two spike categories.
 
     In a perfect world, we could look at and classify 20+ years of stock data history for each stock. However, it is unreasonable to classify such a long history of stock data. For example, there are market-wide shocks around 2008 and 2020 Q1 and Q2 from the recession and COVID, so a 20-year classification period including those moments would be cluttered and imperfect. With this understanding, we contemplated simulating our own fake data, but that lacked the appeal of using real-world data for the models. While the simulated data might have been cleaner, it was unrealistic. The characteristics of real-world data are important in trying to build predictive models, and simulated data lacks the full unpredictability of real-world data. Deciding to go back to real stock data, we noticed market-wide shocks (recessions/spikes) occurring periodically, so we needed to pick a classification window that would fit between these shocks. Conveniently, although there has been significant uncertainty and global economic change since September, 2020, the overall stock market shocks are minimal in the last 5 years. That gave us a great time period for this classification window. We could use data from September 1st, 2020 through September 1st, 2025, to see 5 years of data to classify. This would fulfill the second goal.
-    
+
     With this decision, there were two options for the second goal. From past experience and other learned examples, we knew we would need around 250k individual time points to attempt to train a sufficiently good model. Therefore, the two options were to either gather the 5-year data for 200 stocks, or gather a much longer time-series for fewer stocks. We picked the second option because there is additional evaluation benefit in training these models with longer time-series. The long time-series have a lot of interdependencies, which offer more information to the models in training, but they also challenge the models by stressing their memory capabilities. Given all of that, we chose to save 20 years of stock closing data for 65 different stocks. This would mean gathering the data from September 1st, 2005 through September 1st, 2025 for each stock. This seemed like the best trade off of gathering enough classification-specific data and also gathering enough high-quality time-series data.
-    
+
     The actual gathering process was very simple after those logistics. We used yfinance [4] to import the stock data from every single stock on the NASDAQ stock exchange. After ensuring that each stock had enough data collected in the 20-year window, we attempted to classify the trends and then score the similarities. This left us with a ranking of the best stocks for each classification window, with their data for the classification window and 15 years before that. We downloaded the top 13 stocks in each category - 10 from each category would be used for training and 3 would be used for evaluation. The final result of the data gathering was 50 training stocks that were top-ranking in quality for each category, each with 5,030 time points, yielding the 250k time points and highest-quality trend data we set out to find. We also had 15 stocks set aside for evaluation metrics. At training time, we randomly selected 10 of the top 13 from each category to be training data, but by setting seed we could ensure that the same 10 were selected each time. This gave identical training data to each model, but allowed random selection of stocks for training and evaluation.
     </p>
 
@@ -181,7 +181,7 @@
 <p>After training, the models are insignificant without simple, transparent ways to evaluate their true effectiveness. We choose two simple evaluation metrics: mean squared error (MSE) and mean absolute error (MAE). While these two metrics are not complex, they are simple to implement, quick to calculate, and easy to understand. They are similar metrics, measuring the difference between the prediction and the target, with MSE adding compounding consequences to worse predictions.
 
     To calculate these numbers, our last implementation decision was the input window to the model. Given that we used 5-year (1,250-point) windows in the trend classification, that seemed appropriate as the length of the model inputs for predicting the next time points. Our model architecture set up this phase so that an input of 1,250 time points to each model would output one predicted value, simulating the next-day closing price of the stock. Therefore, for each evaluation stock, we fed the models 1,250-point sequences starting with days 1-1,250, and ending with days 3,779-5,029, yielding approximately 3,780 individual one-step predictions per stock. Each iteration would yield one prediction, which we could compare to the known closing price and calculate the two metrics. After sliding through the complete stock time-series, we returned the averaged metric for the stock.
-    
+
     In another pass, to focus specifically on the prediction accuracy on the classification window of the model, we implemented the same system but only to predict the final 1,250 days, the initial 5-year classification window for each stock. This gave us specific metrics for just the classification, and allowed us to compare the models' prediction accuracy within each trend category. Given these numbers, we were confident that we could draw some conclusions to compare the performance of each model.
     </p>
 
@@ -189,67 +189,63 @@
 <p>Following all of the above framework, we trained the LSTM and Transformer models and evaluated their outputs. Using an NVIDIA GeForce RTX 4070 GPU with batch size 128, both models' losses converged within the 50 epochs. In both cases, by epoch 30, the loss was within one-thousandth of the final loss after the 50th epoch. Also, with the 250k datapoints and 50 epochs of training, the LSTM completed its training in 16 minutes, while the Transformer took 264 minutes. That 16-fold increase is very significant in light of the purpose of these models. They can be used as quick, rough predictions of stock closing prices, and the time difference matters in potential real world applications of these models.
 
   We broke down the evaluation metrics calculations into 20-year one-step prediction accuracy and classification window 5-year one-step prediction accuracy. For both of those periods, we calculate MSE and MAE, and for each model. This yields 8 numbers for each evaluation stock, and the complete chart is included in the appendix.
-  
+
   Highlighting two metrics, compare the MSE calculations for the full time series for each model, and the MAE calculations for the classification windows for each model. As seen in figures 1 and 2, the LSTM model just slightly outperforms the Transformer across all of the metrics. In fact, the MSE is about 10% higher for the Transformer than the LSTM. In the MAE calculation, the same trend is visible. The LSTM outperforms the Transformer by just a little bit in every single classification. More generally, both models do a better job of predicting the decreasing and one spike models, and they both really struggle with increasing and stagnant stocks. Decreasing trends and isolated spikes may be easier to predict because they exhibit stronger directional bias compared to stagnant or steadily increasing stocks, which require finer discrimination of noisy daily fluctuations. This is supported across the board in the figures and the appendix chart.
-  
-  The LSTM's slightly superior performance in every single metric is an interesting discovery, one that warrants additional plotting. To dig in deeper, we implemented plots that compare the true stock data and the one-step prediction series. We focused on the classification windows, and generated time series from each model by predicting the next time point from a 1,250 time point input. The resulting charts were a bit disappointing. Visually, the models could not recover the information to accurately forecast the stock prices (figures 3-5). For instance, in Figure 3 (KVHI), the LSTM predictions show a sharp downtick around timestep 750, mirroring a genuine price decrease in the true series, whereas the Transformer remains flat. However, the magnitude is still misaligned. While the values are not the same, the slope/changes in values have similarities between the LSTM and the true data.
-  </p>
 
-<!-- ===== Results Section Figures ===== -->
-
-<figure>
+  <figure>
   <img src="images/figure_1.png" alt="Figure 1: Model performance comparison overview" />
-  <figcaption><strong>Figure 1.</strong> [caption for figure 1]</figcaption>
+  <figcaption><strong>Figure 1.</strong> Mean squared error for LSTM and Transformer over the full 20-year series, grouped by trend category. Both models perform best on decreasing and one-spike stocks and worst on stagnant stocks; the Transformer consistently has slightly higher MSE in every category.</figcaption>
 </figure>
 
 <figure>
   <img src="images/figure_2.png" alt="Figure 2: LSTM vs Transformer training curves" />
-  <figcaption><strong>Figure 2.</strong> [caption for figure 2]</figcaption>
+  <figcaption><strong>Figure 2.</strong> Mean absolute error for LSTM and Transformer restricted to the 5-year classification windows, grouped by trend category. Error patterns mirror the full-series MSE: both models perform best on decreasing and one-spike stocks and struggle most on stagnant stocks, with the Transformer slightly worse in every category.</figcaption>
 </figure>
+
+The LSTM's slightly superior performance in every single metric is an interesting discovery, one that warrants additional plotting. To dig in deeper, we implemented plots that compare the true stock data and the one-step prediction series. We focused on the classification windows, and generated time series from each model by predicting the next time point from a 1,250 time point input. The resulting charts were a bit disappointing. Visually, the models could not recover the information to accurately forecast the stock prices (figures 3-5). For instance, in Figure 3 (KVHI), the LSTM predictions show a sharp downtick around timestep 750, mirroring a genuine price decrease in the true series, whereas the Transformer remains flat. However, the magnitude is still misaligned. While the values are not the same, the slope/changes in values have similarities between the LSTM and the true data.
+  </p>
 
 <figure>
   <img src="images/figure_3.png" alt="Figure 3: Forecast example on increasing-trend stock" />
-  <figcaption><strong>Figure 3.</strong> [caption for figure 3]</figcaption>
+  <figcaption><strong>Figure 3.</strong> Direct one-step predictions over the 5-year classification window for ERIC. The true scaled daily closing prices contains multi-year rises and falls; the LSTM reflects some of the broad changes in level but remains compressed, while the Transformer is nearly flat, indicating difficulty for both models in recovering detailed price dynamics.</figcaption>
 </figure>
 
 <figure>
   <img src="images/figure_4.png" alt="Figure 4: Forecast example on spike-trend stock" />
-  <figcaption><strong>Figure 4.</strong> [caption for figure 4]</figcaption>
+  <figcaption><strong>Figure 4.</strong> Direct one-step predictions over the 5-year classification window for FUND. The true scaled daily closing prices exhibit a strong upward trend, while the LSTM tracks a smoother, lower-magnitude trajectory and the Transformer remains nearly constant.</figcaption>
 </figure>
 
 <figure>
   <img src="images/figure_5.png" alt="Figure 5: Model error comparison across categories" />
-  <figcaption><strong>Figure 5.</strong> [caption for figure 5]</figcaption>
+  <figcaption><strong>Figure 5.</strong> Direct one-step predictions over the 5-year classification window for KVHI. The true scaled daily closing prices exhibit substantial volatility and a sharp regime change, whereas the LSTM captures only a muted version of the downward shift and the Transformer stays almost flat.</figcaption>
 </figure>
-
-<!-- ===== End Results Figures ===== -->
 
 
 <h2 id="discussion">Discussion</h2>
 <p></p>
 
 <h3 id="limitations">Limitations</h3>
-<p>Limitations of our study cover a few key areas.  Stock prices are highly stochastic, and history-only models do not typically have access to fundamental, macroeconomic, or sentiment-based market drivers. This results in an inherent maximum achievable accuracy. Further, this study focuses on single-step prediction as opposed to multi-step or probabilistic prediction. Different architectures might prove superior under multi-horizon tasks. 
+<p>Limitations of our study cover a few key areas.  Stock prices are highly stochastic, and history-only models do not typically have access to fundamental, macroeconomic, or sentiment-based market drivers. This results in an inherent maximum achievable accuracy. Further, this study focuses on single-step prediction as opposed to multi-step or probabilistic prediction. Different architectures might prove superior under multi-horizon tasks.
     Additionally, while using 5 years of historical data is justified by the trend bucket classification we used, this imposes high computational cost on the Transformer and precludes experiments that use larger datasets. On a related note, the significantly slower training time of the Transformer limited the scope of exploration of larger model variants or longer datasets we were able to perform. In addition, we didn't include technical indicators, volume data, or external features such as news, volatility indices, or relationships between sectors. Multivariate inputs may shift comparative performance. When interpreting our comparative outcomes or generalizing these findings to broader financial prediction settings, these limitations should be taken into account and addressed in future work.</p>
 
 <h3 id="future-work">Future Work</h3>
-<p>Our study used mostly standard default configurations, with limited tuning to prioritize comparing baseline models and also due to computational constraints, particularly for the Transformer. A more attentive approach to tuning hyperparameters could impact the outcome. This could include experimenting with different numbers of epochs to determine whether longer training enables either architecture to extract more useful patterns or just results in overfitting. 
+<p>Our study used mostly standard default configurations, with limited tuning to prioritize comparing baseline models and also due to computational constraints, particularly for the Transformer. A more attentive approach to tuning hyperparameters could impact the outcome. This could include experimenting with different numbers of epochs to determine whether longer training enables either architecture to extract more useful patterns or just results in overfitting.
     Adjusting the learning rate would also yield valuable insights, since smaller or scheduled rates might speed up convergence if tuned correctly. Additionally, varying the depth and width of the models, such as the number of LSTM layers or Transformer encoder blocks and the size of their hidden layers might shed light on whether increased capacity leads to better predictive accuracy or just amplifies noise. Finally, testing multiple input sequence lengths could clarify how much historical context is useful for forecasting. Shorter windows might reduce noise and training time, while longer windows might allow the models to capture broader market structure.
     </p>
 
 <h3 id="implications">Implications</h3>
-<p>These results have several implications for both financial forecasting and the overall study of sequential models. The LSTM possesses inductive biases such as temporal smoothing, recurrence, and simple parameterization that may be advantageous in settings with high levels of noise, such as equity markets. 
-    Pursuant to our observations, when historical patterns are weak, the Transformer's ability to model global dependencies might not result in great enough improvements to justify a training time upwards of five times slower and higher memory requirements. Large-scale datasets quickly become unreasonable for use for testing Transformers especially with iterative research that would benefit from quick experimentation. 
-    LSTMs offer a more realistic compute overhead. Given marginal performance differences, lighter-weight attention modules or hybrids between the two models we analyzed might offer competitive accuracy with less burdensome computational costs. 
+<p>These results have several implications for both financial forecasting and the overall study of sequential models. The LSTM possesses inductive biases such as temporal smoothing, recurrence, and simple parameterization that may be advantageous in settings with high levels of noise, such as equity markets.
+    Pursuant to our observations, when historical patterns are weak, the Transformer's ability to model global dependencies might not result in great enough improvements to justify a training time upwards of five times slower and higher memory requirements. Large-scale datasets quickly become unreasonable for use for testing Transformers especially with iterative research that would benefit from quick experimentation.
+    LSTMs offer a more realistic compute overhead. Given marginal performance differences, lighter-weight attention modules or hybrids between the two models we analyzed might offer competitive accuracy with less burdensome computational costs.
     In addition to optimizing compute, it can be considered that the limiting factor might be the absence of richer features such as volatility indicators, sector correlations, macro trends, or news and sentiment information. Overall, our results suggest that for standard stock price forecasting, LSTMs are a useful and efficient baseline, whereas Transformers might not inherently outperform them in this domain.</p>
 
 <h2 id="references">References</h2>
 <p>[1] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural Computation, vol. 9, no. 8, pp. 1735-1780, 1997.<br>
-    
+
     [2] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, Ł. Kaiser, and I. Polosukhin, “Attention is all you need,” in Advances in Neural Information Processing Systems, 2017, pp. 5998-6008.<br>
-    
+
     [3] H. Zhou, S. Zhang, J. Peng, S. Zhang, J. Li, H. Xiong, and W. Zhang, “Informer: Beyond efficient Transformer for long sequence time-series forecasting,” arXiv preprint arXiv:2012.07436, 2021.<br>
-    
+
     [4] Yahoo Finance, “Yahoo Finance: Stock market quotes, news, and data,” Yahoo, Accessed: Feb. 2025. [Online]. Available: https://finance.yahoo.com/<br></p>
 
 <h2 id="appendix">Appendix</h2>
@@ -440,7 +436,7 @@
       </tr>
     </tbody>
   </table>
-  
+
 
 </body>
 </html>
