@@ -182,11 +182,48 @@
 
     To calculate these numbers, our last implementation decision was the input window to the model. Given that we used 5-year (1,250-point) windows in the trend classification, that seemed appropriate as the length of the model inputs for predicting the next time points. Our model architecture set up this phase so that an input of 1,250 time points to each model would output one predicted value, simulating the next-day closing price of the stock. Therefore, for each evaluation stock, we fed the models 1,250-point sequences starting with days 1-1,250, and ending with days 3,779-5,029, yielding approximately 3,780 individual one-step predictions per stock. Each iteration would yield one prediction, which we could compare to the known closing price and calculate the two metrics. After sliding through the complete stock time-series, we returned the averaged metric for the stock.
     
-    In another pass, to focus specifically on the prediction accuracy on the classification window of the model, we implemented the same system but only to predict the final 1,250 days, the initial 5-year classification window for each stock. This gave us specific metrics for just the classification, and allowed us to compare the models’ prediction accuracy within each trend category. Given these numbers, we were confident that we could draw some conclusions to compare the performance of each model.
+    In another pass, to focus specifically on the prediction accuracy on the classification window of the model, we implemented the same system but only to predict the final 1,250 days, the initial 5-year classification window for each stock. This gave us specific metrics for just the classification, and allowed us to compare the models' prediction accuracy within each trend category. Given these numbers, we were confident that we could draw some conclusions to compare the performance of each model.
     </p>
 
 <h2 id="results">Results</h2>
-<p>[Results text]</p>
+<p>Following all of the above framework, we trained the LSTM and Transformer models and evaluated their outputs. Using an NVIDIA GeForce RTX 4070 GPU with batch size 128, both models' losses converged within the 50 epochs. In both cases, by epoch 30, the loss was within one-thousandth of the final loss after the 50th epoch. Also, with the 250k datapoints and 50 epochs of training, the LSTM completed its training in 16 minutes, while the Transformer took 264 minutes. That 16-fold increase is very significant in light of the purpose of these models. They can be used as quick, rough predictions of stock closing prices, and the time difference matters in potential real world applications of these models.
+
+  We broke down the evaluation metrics calculations into 20-year one-step prediction accuracy and classification window 5-year one-step prediction accuracy. For both of those periods, we calculate MSE and MAE, and for each model. This yields 8 numbers for each evaluation stock, and the complete chart is included in the appendix.
+  
+  Highlighting two metrics, compare the MSE calculations for the full time series for each model, and the MAE calculations for the classification windows for each model. As seen in figures 1 and 2, the LSTM model just slightly outperforms the Transformer across all of the metrics. In fact, the MSE is about 10% higher for the Transformer than the LSTM. In the MAE calculation, the same trend is visible. The LSTM outperforms the Transformer by just a little bit in every single classification. More generally, both models do a better job of predicting the decreasing and one spike models, and they both really struggle with increasing and stagnant stocks. Decreasing trends and isolated spikes may be easier to predict because they exhibit stronger directional bias compared to stagnant or steadily increasing stocks, which require finer discrimination of noisy daily fluctuations. This is supported across the board in the figures and the appendix chart.
+  
+  The LSTM's slightly superior performance in every single metric is an interesting discovery, one that warrants additional plotting. To dig in deeper, we implemented plots that compare the true stock data and the one-step prediction series. We focused on the classification windows, and generated time series from each model by predicting the next time point from a 1,250 time point input. The resulting charts were a bit disappointing. Visually, the models could not recover the information to accurately forecast the stock prices (figures 3-5). For instance, in Figure 3 (KVHI), the LSTM predictions show a sharp downtick around timestep 750, mirroring a genuine price decrease in the true series, whereas the Transformer remains flat. However, the magnitude is still misaligned. While the values are not the same, the slope/changes in values have similarities between the LSTM and the true data.
+  </p>
+
+<!-- ===== Results Section Figures ===== -->
+
+<figure>
+  <img src="images/figure_1.png" alt="Figure 1: Model performance comparison overview" />
+  <figcaption><strong>Figure 1.</strong> [caption for figure 1]</figcaption>
+</figure>
+
+<figure>
+  <img src="images/figure_2.png" alt="Figure 2: LSTM vs Transformer training curves" />
+  <figcaption><strong>Figure 2.</strong> [caption for figure 2]</figcaption>
+</figure>
+
+<figure>
+  <img src="images/figure_3.png" alt="Figure 3: Forecast example on increasing-trend stock" />
+  <figcaption><strong>Figure 3.</strong> [caption for figure 3]</figcaption>
+</figure>
+
+<figure>
+  <img src="images/figure_4.png" alt="Figure 4: Forecast example on spike-trend stock" />
+  <figcaption><strong>Figure 4.</strong> [caption for figure 4]</figcaption>
+</figure>
+
+<figure>
+  <img src="images/figure_5.png" alt="Figure 5: Model error comparison across categories" />
+  <figcaption><strong>Figure 5.</strong> [caption for figure 5]</figcaption>
+</figure>
+
+<!-- ===== End Results Figures ===== -->
+
 
 <h2 id="discussion">Discussion</h2>
 <p></p>
